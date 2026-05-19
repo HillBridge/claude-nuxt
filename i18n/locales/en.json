@@ -1,0 +1,50 @@
+{
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "reset": "Reset",
+    "loading": "Loading...",
+    "noData": "No data",
+    "total": "{count} items total"
+  },
+  "auth": {
+    "login": "Sign In",
+    "logout": "Sign Out",
+    "email": "Email",
+    "password": "Password",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot password?",
+    "loginSuccess": "Signed in successfully",
+    "logoutSuccess": "Signed out"
+  },
+  "user": {
+    "title": "User Management",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status",
+    "createdAt": "Created At",
+    "roles": {
+      "admin": "Admin",
+      "manager": "Manager",
+      "member": "Member",
+      "guest": "Guest"
+    },
+    "statuses": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "banned": "Banned"
+    }
+  },
+  "error": {
+    "403": "Access denied",
+    "404": "Page not found",
+    "500": "Server error",
+    "networkError": "Network connection failed"
+  }
+}
