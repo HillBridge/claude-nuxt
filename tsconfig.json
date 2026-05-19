@@ -2,15 +2,10 @@
   "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
     "strict": true,
-    "verbatimModuleSyntax": true,
-    "baseUrl": ".",
-    "paths": {
-      "~/*": ["./app/*"],
-      "@/*": ["./app/*"],
-      "#types/*": ["./app/types/*"]
-    }
+    "verbatimModuleSyntax": true
   },
   "include": [
+    ".nuxt/nuxt.d.ts",
     "app/**/*.ts",
     "app/**/*.vue",
     "server/**/*.ts",
@@ -19,10 +14,5 @@
     "nuxt.config.ts",
     "app.config.ts"
   ],
-  "exclude": [
-    "node_modules",
-    ".nuxt",
-    ".output",
-    "dist"
-  ]
+  "exclude": ["node_modules", ".output", "dist"]
 }

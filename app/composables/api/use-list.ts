@@ -23,7 +23,7 @@ export function useList<TEntity, TParams extends QueryParams = QueryParams>(
   const { fetcher, initialParams = {}, immediate = true, watchParams = true } = options
 
   // ---- 状态 ----
-  const list = ref<TEntity[]>([]) as ReturnType<typeof ref<TEntity[]>>
+  const list = ref<TEntity[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const pagination = ref<Pagination>({

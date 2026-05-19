@@ -94,7 +94,7 @@
     <!-- 数据表格 -->
     <CommonDataTable
       :columns="columns"
-      :data="list"
+      :data="(list as unknown as Record<string, unknown>[])"
       :loading="loading"
       :pagination="pagination"
       @page-change="setPage"
@@ -115,7 +115,7 @@
           <BaseButton
             variant="ghost"
             size="xs"
-            @click.stop="navigateTo(`/dashboard/users/${(row as User).id}`)"
+            @click.stop="navigateTo(`/dashboard/users/${(row as unknown as User).id}`)"
           >
             编辑
           </BaseButton>
@@ -125,7 +125,7 @@
             size="xs"
             class="text-red-600"
             :loading="deleting"
-            @click.stop="handleDelete(row as User)"
+            @click.stop="handleDelete(row as unknown as User)"
           >
             删除
           </BaseButton>

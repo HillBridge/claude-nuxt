@@ -3,8 +3,8 @@
 
 import { z } from 'zod'
 
-import { signToken } from '~/server/utils/auth'
-import { successResponse } from '~/server/utils/response'
+import { signToken } from '../../utils/auth'
+import { successResponse } from '../../utils/response'
 
 // Zod schema - 服务端输入验证
 const loginSchema = z.object({

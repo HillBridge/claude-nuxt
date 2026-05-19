@@ -13,7 +13,7 @@ export default defineEventHandler((event) => {
   }
   setHeader(event, 'Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
   setHeader(event, 'Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Request-ID')
-  setHeader(event, 'Access-Control-Max-Age', '86400')
+  setHeader(event, 'Access-Control-Max-Age', 86400)
 
   if (event.method === 'OPTIONS') {
     setResponseStatus(event, 204)

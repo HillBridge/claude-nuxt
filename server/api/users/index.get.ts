@@ -2,8 +2,8 @@
 // GET /api/users - 用户列表
 // 文件命名规则：[method].ts 自动绑定 HTTP 方法
 
-import { paginatedResponse } from '~/server/utils/response'
-import { getAuthUser } from '~/server/utils/auth'
+import { paginatedResponse } from '../../utils/response'
+import { getAuthUser } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   // 验证认证

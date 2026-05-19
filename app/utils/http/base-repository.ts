@@ -45,7 +45,7 @@ export abstract class BaseRepository<
   async create(data: TCreateDTO): Promise<TEntity> {
     return this.http<TEntity>(this.basePath, {
       method: 'POST',
-      body: data,
+      body: data as unknown as Record<string, unknown>,
     })
   }
 
@@ -53,7 +53,7 @@ export abstract class BaseRepository<
   async update(id: number | string, data: TUpdateDTO): Promise<TEntity> {
     return this.http<TEntity>(`${this.basePath}/${id}`, {
       method: 'PUT',
-      body: data,
+      body: data as unknown as Record<string, unknown>,
     })
   }
 
@@ -61,7 +61,7 @@ export abstract class BaseRepository<
   async patch(id: number | string, data: Partial<TUpdateDTO>): Promise<TEntity> {
     return this.http<TEntity>(`${this.basePath}/${id}`, {
       method: 'PATCH',
-      body: data,
+      body: data as unknown as Record<string, unknown>,
     })
   }
 
@@ -82,7 +82,7 @@ export abstract class BaseRepository<
   async upload(
     file: File,
     extraData?: Record<string, unknown>,
-    onProgress?: (percent: number) => void,
+    _onProgress?: (percent: number) => void,
   ): Promise<{ url: string; key: string }> {
     const formData = new FormData()
     formData.append('file', file)
@@ -94,11 +94,6 @@ export abstract class BaseRepository<
     return this.http<{ url: string; key: string }>(`${this.basePath}/upload`, {
       method: 'POST',
       body: formData,
-      onUploadProgress: (event) => {
-        if (onProgress && event.total) {
-          onProgress(Math.round((event.loaded / event.total) * 100))
-        }
-      },
     })
   }
 }

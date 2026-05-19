@@ -64,18 +64,14 @@ export function createHttpClient(config: RequestConfig = {}) {
     // ---- 请求拦截 ----
     async onRequest({ options }) {
       const token = getToken()
+      const existing = options.headers ?? new Headers()
+      const headersObj: Record<string, string> = Object.fromEntries(existing)
+      headersObj['X-Request-ID'] = crypto.randomUUID()
+      headersObj['X-App-Version'] = runtimeConfig.public.appVersion
       if (token && config.auth !== false) {
-        options.headers = {
-          ...options.headers,
-          Authorization: `Bearer ${token}`,
-        }
+        headersObj['Authorization'] = `Bearer ${token}`
       }
-      // 添加请求 ID，方便链路追踪
-      options.headers = {
-        ...options.headers,
-        'X-Request-ID': crypto.randomUUID(),
-        'X-App-Version': runtimeConfig.public.appVersion,
-      }
+      options.headers = new Headers(headersObj)
     },
 
     // ---- 响应拦截 ----
@@ -100,10 +96,9 @@ export function createHttpClient(config: RequestConfig = {}) {
           }
           const newToken = await refreshPromise
           // 用新 token 重试一次
-          fetchOptions.headers = {
-            ...fetchOptions.headers,
-            Authorization: `Bearer ${newToken}`,
-          }
+          const retryHeaders = new Headers(Object.fromEntries(fetchOptions.headers ?? new Headers()))
+          retryHeaders.set('Authorization', `Bearer ${newToken}`)
+          fetchOptions.headers = retryHeaders
           return
         } catch {
           clearToken()

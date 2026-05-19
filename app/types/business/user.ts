@@ -62,4 +62,5 @@ export interface UserQueryParams {
   status?: UserStatus
   page?: number
   pageSize?: number
+  [key: string]: unknown
 }
