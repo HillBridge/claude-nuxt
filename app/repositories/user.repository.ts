@@ -19,18 +19,18 @@ export class UserRepository extends BaseRepository<User, RegisterParams, Partial
   // ---- Auth 相关（不在 CRUD 范围内的独立方法）----
 
   async login(params: LoginParams): Promise<LoginResult> {
-    return this.http<LoginResult>('/auth/login', {
+    return this.http<LoginResult>('auth/login', {
       method: 'POST',
       body: params,
     })
   }
 
   async logout(): Promise<void> {
-    await this.http('/auth/logout', { method: 'POST' })
+    await this.http('auth/logout', { method: 'POST' })
   }
 
   async refreshToken(refreshToken: string): Promise<LoginResult> {
-    return this.http<LoginResult>('/auth/refresh', {
+    return this.http<LoginResult>('auth/refresh', {
       method: 'POST',
       body: { refreshToken },
     })
@@ -39,11 +39,11 @@ export class UserRepository extends BaseRepository<User, RegisterParams, Partial
   // ---- 用户信息 ----
 
   async getProfile(): Promise<UserProfile> {
-    return this.http<UserProfile>('/users/me')
+    return this.http<UserProfile>('users/me')
   }
 
   async updateProfile(data: Partial<UserProfile>): Promise<UserProfile> {
-    return this.http<UserProfile>('/users/me', {
+    return this.http<UserProfile>('users/me', {
       method: 'PATCH',
       body: data,
     })
@@ -53,7 +53,7 @@ export class UserRepository extends BaseRepository<User, RegisterParams, Partial
     oldPassword: string
     newPassword: string
   }): Promise<void> {
-    await this.http('/users/me/password', {
+    await this.http('users/me/password', {
       method: 'POST',
       body: params,
     })

@@ -42,8 +42,9 @@ async function doRefreshToken(): Promise<string> {
   const refreshToken = useCookie(REFRESH_TOKEN_KEY).value
   if (!refreshToken) throw new HttpError(401, '登录已过期，请重新登录')
 
+  const runtimeConfig = useRuntimeConfig()
   const result = await ofetch<ApiResponse<{ accessToken: string; refreshToken: string }>>(
-    '/auth/refresh',
+    `${runtimeConfig.public.apiBaseUrl}/auth/refresh`,
     { method: 'POST', body: { refreshToken } },
   )
   setToken(result.data.accessToken, result.data.refreshToken)
