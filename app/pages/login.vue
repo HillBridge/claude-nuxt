@@ -2,6 +2,8 @@
   // app/pages/login.vue
   // 登录页 - 展示页面如何使用 Layout、Store、Repository
 
+  import { encryptText, decryptText } from '~/utils/crypto'
+
   definePageMeta({
     layout: 'auth',
     // 已登录用户访问登录页，重定向到首页
@@ -17,10 +19,6 @@
   const route = useRoute()
   const { notify } = useNotify()
 
-  const supportsCredentialAPI = typeof window !== 'undefined'
-    && 'credentials' in navigator
-    && typeof PasswordCredential !== 'undefined'
-
   const REMEMBER_KEY = 'login_remember'
 
   const form = reactive({
@@ -30,31 +28,15 @@
   })
 
   onMounted(async () => {
-    // 优先从 localStorage 恢复记住的凭证
     try {
       const saved = localStorage.getItem(REMEMBER_KEY)
-      if (saved) {
-        const { email, password } = JSON.parse(saved)
-        form.email = email ?? ''
-        form.password = password ?? ''
-        form.remember = true
-        return
-      }
+      if (!saved) return
+      const { email, encryptedPassword } = JSON.parse(saved)
+      form.email = email ?? ''
+      form.password = await decryptText(encryptedPassword)
+      form.remember = true
     } catch {
-      // 静默忽略
-    }
-
-    // 降级尝试 Credential Management API
-    if (!supportsCredentialAPI) return
-    try {
-      const cred = await navigator.credentials.get({ password: true, mediation: 'silent' })
-      if (cred instanceof PasswordCredential) {
-        form.email = cred.id
-        form.password = cred.password ?? ''
-        form.remember = true
-      }
-    } catch {
-      // API 不支持或被浏览器策略拒绝，静默忽略
+      localStorage.removeItem(REMEMBER_KEY)
     }
   })
 
@@ -67,18 +49,10 @@
     mutationFn: (params: typeof form) => authStore.login(params),
     onSuccess: async () => {
       if (form.remember) {
-        localStorage.setItem(REMEMBER_KEY, JSON.stringify({ email: form.email, password: form.password }))
+        const encryptedPassword = await encryptText(form.password)
+        localStorage.setItem(REMEMBER_KEY, JSON.stringify({ email: form.email, encryptedPassword }))
       } else {
         localStorage.removeItem(REMEMBER_KEY)
-      }
-      if (supportsCredentialAPI) {
-        if (form.remember) {
-          await navigator.credentials.store(
-            new PasswordCredential({ id: form.email, password: form.password }),
-          )
-        } else {
-          await navigator.credentials.preventSilentAccess()
-        }
       }
       const redirect = route.query.redirect as string | undefined
       notify.success('登录成功')

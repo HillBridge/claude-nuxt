@@ -10,6 +10,7 @@ import { successResponse } from '../../utils/response'
 const loginSchema = z.object({
   email: z.string().email('邮箱格式不正确'),
   password: z.string().min(6, '密码不能少于6位'),
+  remember: z.boolean().optional().default(false),
 })
 
 export default defineEventHandler(async (event) => {
@@ -24,7 +25,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { email, password } = parsed.data
+  const { email, password, remember } = parsed.data
 
   // TODO: 查询数据库验证密码
   // const user = await db.user.findUnique({ where: { email } })
@@ -46,17 +47,18 @@ export default defineEventHandler(async (event) => {
     updatedAt: new Date().toISOString(),
   }
 
-  const accessToken = await signToken({
-    sub: mockUser.id,
-    email: mockUser.email,
-    role: mockUser.role,
-  })
+  const REMEMBER_MAX_AGE = 30 * 24 * 60 * 60  // 30 天
+  const accessToken = await signToken(
+    { sub: mockUser.id, email: mockUser.email, role: mockUser.role },
+    remember ? '30d' : '1d',
+  )
 
   setCookie(event, 'auth_token', accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60,
+    // remember=true: 持久化 30 天；remember=false: 会话 cookie（浏览器关闭即失效）
+    ...(remember ? { maxAge: REMEMBER_MAX_AGE } : {}),
     path: '/',
   })
 
