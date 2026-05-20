@@ -14,10 +14,7 @@ export default defineNuxtConfig({
   // ============================================================
   // Nuxt Layers - 按业务域拆分模块
   // ============================================================
-  extends: [
-    './layers/auth',
-    './layers/admin',
-  ],
+  extends: ['./layers/auth', './layers/admin'],
 
   // ============================================================
   // 模块
@@ -35,11 +32,7 @@ export default defineNuxtConfig({
   // 自动导入 - 扩展默认扫描目录
   // ============================================================
   imports: {
-    dirs: [
-      'stores/**',
-      'composables/**',
-      'utils/**',
-    ],
+    dirs: ['stores/**', 'composables/**', 'utils/**'],
   },
 
   // ============================================================
@@ -61,7 +54,7 @@ export default defineNuxtConfig({
     // 服务端渲染（需要 SEO 的页面）
     '/blog/**': { ssr: true },
     // SPA 模式（纯交互页面，无 SEO 需求）
-    '/dashboard/**': { ssr: false },
+    '/dashboard/**': { ssr: true },
     // ISR - 增量静态再生
     '/products/**': { isr: 3600 },
     // 服务端 API 代理
@@ -87,11 +80,7 @@ export default defineNuxtConfig({
   // ============================================================
   // CSS 全局样式
   // ============================================================
-  css: [
-    '~/assets/css/tailwind.css',
-    '~/assets/css/variables.css',
-    '~/assets/css/global.css',
-  ],
+  css: ['~/assets/css/tailwind.css', '~/assets/css/variables.css', '~/assets/css/global.css'],
 
   // ============================================================
   // PostCSS
