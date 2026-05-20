@@ -12,9 +12,10 @@
   })
 
   // ---- 列表数据 ----
-  const { list, loading, pagination, search, setPage, fetch } = useList<User, UserQueryParams>({
+  const { list, loading, pagination, search, setPage, fetch } = await useList<User, UserQueryParams>({
     fetcher: (p) => userRepository.list(p),
     initialParams: { pageSize: 20 },
+    ssrKey: 'dashboard-users',
   })
 
   // ---- 表格列配置 ----

@@ -14,6 +14,8 @@ export abstract class BaseRepository<
 > {
   private _http?: ReturnType<typeof useHttpClient>
   protected get http() {
+    // SSR 下不缓存，每次取新实例保证请求上下文正确
+    if (import.meta.server) return useHttpClient()
     if (!this._http) this._http = useHttpClient()
     return this._http
   }

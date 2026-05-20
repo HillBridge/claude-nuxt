@@ -56,7 +56,12 @@ async function doRefreshToken(): Promise<string> {
 // ============================================================
 export function createHttpClient(config: RequestConfig = {}) {
   const runtimeConfig = useRuntimeConfig()
-  const baseURL = config.baseURL ?? runtimeConfig.public.apiBaseUrl
+  const path = config.baseURL ?? runtimeConfig.public.apiBaseUrl
+
+  // Node.js fetch 不支持相对 URL，SSR 必须拼完整地址
+  const baseURL = import.meta.server
+    ? `${useRequestURL().origin}${path}`
+    : path
 
   const options: FetchOptions = {
     baseURL,
@@ -64,14 +69,22 @@ export function createHttpClient(config: RequestConfig = {}) {
 
     // ---- 请求拦截 ----
     async onRequest({ options }) {
-      const token = getToken()
       const existing = options.headers ?? new Headers()
       const headersObj: Record<string, string> = Object.fromEntries(existing)
       headersObj['X-Request-ID'] = crypto.randomUUID()
       headersObj['X-App-Version'] = runtimeConfig.public.appVersion
-      if (token && config.auth !== false) {
-        headersObj['Authorization'] = `Bearer ${token}`
+
+      if (import.meta.server) {
+        // SSR：透传浏览器原始 cookie，useRequestHeaders 通过 AsyncLocalStorage 获取当前请求上下文
+        const { cookie } = useRequestHeaders(['cookie'])
+        if (cookie) headersObj['cookie'] = cookie
+      } else {
+        const token = getToken()
+        if (token && config.auth !== false) {
+          headersObj['Authorization'] = `Bearer ${token}`
+        }
       }
+
       options.headers = new Headers(headersObj)
     },
 
@@ -115,10 +128,14 @@ export function createHttpClient(config: RequestConfig = {}) {
   return ofetch.create(options)
 }
 
-// 默认客户端实例（单例）
+// 默认客户端实例
+// CSR：单例复用；SSR：每次请求新建，避免跨请求共享上下文
 let _client: ReturnType<typeof createHttpClient> | null = null
 
 export function useHttpClient() {
+  if (import.meta.server) {
+    return createHttpClient()
+  }
   if (!_client) {
     _client = createHttpClient()
   }

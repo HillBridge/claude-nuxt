@@ -7,17 +7,15 @@ import { ref, computed, watch } from 'vue'
 import type { PaginatedResult, QueryParams, Pagination } from '~/types'
 
 interface UseListOptions<TParams extends QueryParams> {
-  // 请求函数
   fetcher: (params: TParams) => Promise<PaginatedResult<unknown>>
-  // 初始查询参数
   initialParams?: Partial<TParams>
-  // 是否立即发起请求
   immediate?: boolean
-  // 参数变化时自动重置到第一页
   watchParams?: boolean
+  // 提供此 key 时启用 SSR 模式：useAsyncData 负责首屏数据，payload 序列化到 HTML
+  ssrKey?: string
 }
 
-export function useList<TEntity, TParams extends QueryParams = QueryParams>(
+export async function useList<TEntity, TParams extends QueryParams = QueryParams>(
   options: UseListOptions<TParams>,
 ) {
   const { fetcher, initialParams = {}, immediate = true, watchParams = true } = options
@@ -97,8 +95,31 @@ export function useList<TEntity, TParams extends QueryParams = QueryParams>(
     }
   }
 
-  // ---- 立即执行 ----
-  if (immediate) {
+  // ---- 初始加载 ----
+  if (options.ssrKey) {
+    // await 确保 setup() 在数据就绪后才返回，Vue SSR 渲染时 list.value 已有值
+    const { data, pending, error: fetchError } = await useAsyncData(
+      options.ssrKey,
+      () => fetcher(params.value as TParams),
+    )
+
+    // 同步写入，setup() 返回前 list 已填充
+    if (data.value) {
+      list.value = data.value.list as TEntity[]
+      pagination.value = data.value.pagination
+    }
+    loading.value = pending.value
+
+    // 后续客户端翻页/搜索触发的响应式更新
+    watch(data, (val) => {
+      if (val) {
+        list.value = val.list as TEntity[]
+        pagination.value = val.pagination
+      }
+    })
+    watch(pending, (val) => { loading.value = val })
+    watch(fetchError, (val) => { error.value = val?.message ?? null })
+  } else if (immediate) {
     fetch()
   }
 
