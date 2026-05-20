@@ -4,11 +4,13 @@
 import { successResponse } from '../../utils/response'
 
 export default defineEventHandler((event) => {
-  deleteCookie(event, 'auth_token', {
+  const cookieBase = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
     path: '/',
-  })
+  }
+  deleteCookie(event, 'auth_token', cookieBase)
+  deleteCookie(event, 'refresh_token', cookieBase)
   return successResponse(null)
 })

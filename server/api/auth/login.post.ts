@@ -48,18 +48,32 @@ export default defineEventHandler(async (event) => {
   }
 
   const REMEMBER_MAX_AGE = 30 * 24 * 60 * 60  // 30 天
+  const SESSION_MAX_AGE  =  7 * 24 * 60 * 60  //  7 天
+
+  const cookieBase = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+  }
+
   const accessToken = await signToken(
     { sub: mockUser.id, email: mockUser.email, role: mockUser.role },
     remember ? '30d' : '1d',
   )
-
   setCookie(event, 'auth_token', accessToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    // remember=true: 持久化 30 天；remember=false: 会话 cookie（浏览器关闭即失效）
+    ...cookieBase,
     ...(remember ? { maxAge: REMEMBER_MAX_AGE } : {}),
-    path: '/',
+  })
+
+  // refresh_token 用于在 access token 过期后静默续期
+  const refreshToken = await signToken(
+    { sub: mockUser.id, email: mockUser.email, role: mockUser.role },
+    remember ? '60d' : '7d',
+  )
+  setCookie(event, 'refresh_token', refreshToken, {
+    ...cookieBase,
+    maxAge: remember ? REMEMBER_MAX_AGE * 2 : SESSION_MAX_AGE,
   })
 
   return successResponse({ user: mockUser })

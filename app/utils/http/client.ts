@@ -1,6 +1,10 @@
 // app/utils/http/client.ts
 // HTTP 客户端 - 封装 ofetch，统一处理认证、错误、loading
 // 这是整个 API 层的基础，业务代码不应直接使用，应通过 repository 访问
+//
+// 认证方案：HttpOnly Cookie（auth_token）
+//   SSR：useRequestHeaders 透传浏览器 cookie → 后端 getCookie 读取
+//   CSR：浏览器自动携带同源 cookie，无需客户端处理
 
 import { ofetch } from 'ofetch'
 import type { FetchOptions } from 'ofetch'
@@ -9,46 +13,17 @@ import { HttpError, BusinessCode } from '~/types/api/http'
 import type { ApiResponse, RequestConfig } from '~/types'
 
 // ============================================================
-// Token 管理（使用 cookie 实现 SSR 兼容）
-// ============================================================
-const TOKEN_KEY = 'access_token'
-const REFRESH_TOKEN_KEY = 'refresh_token'
-
-function getToken(): string | null {
-  if (import.meta.server) return null
-  return useCookie(TOKEN_KEY).value ?? null
-}
-
-function setToken(token: string, refreshToken?: string): void {
-  const accessTokenCookie = useCookie(TOKEN_KEY, { maxAge: 7 * 24 * 60 * 60 })
-  accessTokenCookie.value = token
-  if (refreshToken) {
-    const refreshTokenCookie = useCookie(REFRESH_TOKEN_KEY, { maxAge: 30 * 24 * 60 * 60 })
-    refreshTokenCookie.value = refreshToken
-  }
-}
-
-function clearToken(): void {
-  useCookie(TOKEN_KEY).value = null
-  useCookie(REFRESH_TOKEN_KEY).value = null
-}
-
-// ============================================================
 // 刷新 token 防并发：同时只有一个 refresh 请求
 // ============================================================
-let refreshPromise: Promise<string> | null = null
+let refreshPromise: Promise<void> | null = null
 
-async function doRefreshToken(): Promise<string> {
-  const refreshToken = useCookie(REFRESH_TOKEN_KEY).value
-  if (!refreshToken) throw new HttpError(401, '登录已过期，请重新登录')
-
+async function doRefreshToken(): Promise<void> {
   const runtimeConfig = useRuntimeConfig()
-  const result = await ofetch<ApiResponse<{ accessToken: string; refreshToken: string }>>(
-    `${runtimeConfig.public.apiBaseUrl}/auth/refresh`,
-    { method: 'POST', body: { refreshToken } },
-  )
-  setToken(result.data.accessToken, result.data.refreshToken)
-  return result.data.accessToken
+  // 刷新接口由服务端负责读旧 cookie、写新 cookie，客户端无需传参
+  await ofetch(`${runtimeConfig.public.apiBaseUrl}/auth/refresh`, {
+    method: 'POST',
+    credentials: 'include',
+  })
 }
 
 // ============================================================
@@ -59,9 +34,7 @@ export function createHttpClient(config: RequestConfig = {}) {
   const path = config.baseURL ?? runtimeConfig.public.apiBaseUrl
 
   // Node.js fetch 不支持相对 URL，SSR 必须拼完整地址
-  const baseURL = import.meta.server
-    ? `${useRequestURL().origin}${path}`
-    : path
+  const baseURL = import.meta.server ? `${useRequestURL().origin}${path}` : path
 
   const options: FetchOptions = {
     baseURL,
@@ -78,12 +51,8 @@ export function createHttpClient(config: RequestConfig = {}) {
         // SSR：透传浏览器原始 cookie，useRequestHeaders 通过 AsyncLocalStorage 获取当前请求上下文
         const { cookie } = useRequestHeaders(['cookie'])
         if (cookie) headersObj['cookie'] = cookie
-      } else {
-        const token = getToken()
-        if (token && config.auth !== false) {
-          headersObj['Authorization'] = `Bearer ${token}`
-        }
       }
+      // CSR：浏览器自动携带 HttpOnly cookie，无需手动处理
 
       options.headers = new Headers(headersObj)
     },
@@ -99,8 +68,9 @@ export function createHttpClient(config: RequestConfig = {}) {
     },
 
     // ---- 错误拦截 ----
-    async onResponseError({ response, options: fetchOptions }) {
+    async onResponseError({ response }) {
       // 401 - 尝试 refresh token
+      // 刷新成功后服务端会 Set-Cookie 新 auth_token，后续重试自动携带
       if (response.status === 401) {
         try {
           if (!refreshPromise) {
@@ -108,14 +78,10 @@ export function createHttpClient(config: RequestConfig = {}) {
               refreshPromise = null
             })
           }
-          const newToken = await refreshPromise
-          // 用新 token 重试一次
-          const retryHeaders = new Headers(Object.fromEntries(fetchOptions.headers ?? new Headers()))
-          retryHeaders.set('Authorization', `Bearer ${newToken}`)
-          fetchOptions.headers = retryHeaders
+          await refreshPromise
+          // 重试由 ofetch 调用方负责（返回不抛出即表示可以重试）
           return
         } catch {
-          clearToken()
           await navigateTo('/login')
         }
       }
