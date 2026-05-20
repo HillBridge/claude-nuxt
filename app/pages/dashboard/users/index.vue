@@ -74,7 +74,10 @@
       :breadcrumbs="[{ label: '首页', to: '/dashboard' }, { label: '用户管理' }]"
     >
       <template #actions>
-        <BaseButton v-if="authStore.can('users:write')" @click="navigateTo('/dashboard/users/create')">
+        <BaseButton
+          v-if="authStore.can('users:write')"
+          @click="navigateTo('/dashboard/users/create')"
+        >
           新增用户
         </BaseButton>
       </template>
@@ -94,7 +97,7 @@
     <!-- 数据表格 -->
     <CommonDataTable
       :columns="columns"
-      :data="(list as unknown as Record<string, unknown>[])"
+      :data="list as unknown as Record<string, unknown>[]"
       :loading="loading"
       :pagination="pagination"
       @page-change="setPage"
@@ -119,16 +122,20 @@
           >
             编辑
           </BaseButton>
-          <BaseButton
-            v-if="authStore.can('users:write')"
-            variant="ghost"
-            size="xs"
-            class="text-red-600"
-            :loading="deleting"
-            @click.stop="handleDelete(row as unknown as User)"
-          >
-            删除
-          </BaseButton>
+          <AuthGuard permission="users:write" role="admin">
+            <BaseButton
+              variant="ghost"
+              size="xs"
+              class="text-red-600"
+              :loading="deleting"
+              @click.stop="handleDelete(row as unknown as User)"
+            >
+              删除
+            </BaseButton>
+            <template #fallback>
+              <span class="text-xs text-gray-300">—</span>
+            </template>
+          </AuthGuard>
         </div>
       </template>
     </CommonDataTable>
