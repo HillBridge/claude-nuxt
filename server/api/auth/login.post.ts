@@ -10,7 +10,6 @@ import { successResponse } from '../../utils/response'
 const loginSchema = z.object({
   email: z.string().email('邮箱格式不正确'),
   password: z.string().min(6, '密码不能少于6位'),
-  remember: z.boolean().optional().default(false),
 })
 
 export default defineEventHandler(async (event) => {

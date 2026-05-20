@@ -17,6 +17,10 @@
   const route = useRoute()
   const { notify } = useNotify()
 
+  const supportsCredentialAPI = typeof window !== 'undefined'
+    && 'credentials' in navigator
+    && typeof PasswordCredential !== 'undefined'
+
   const REMEMBER_KEY = 'login_remember'
 
   const form = reactive({
@@ -25,13 +29,32 @@
     remember: false,
   })
 
-  onMounted(() => {
-    const saved = localStorage.getItem(REMEMBER_KEY)
-    if (saved) {
-      const { email, password } = JSON.parse(saved)
-      form.email = email
-      form.password = password
-      form.remember = true
+  onMounted(async () => {
+    // 优先从 localStorage 恢复记住的凭证
+    try {
+      const saved = localStorage.getItem(REMEMBER_KEY)
+      if (saved) {
+        const { email, password } = JSON.parse(saved)
+        form.email = email ?? ''
+        form.password = password ?? ''
+        form.remember = true
+        return
+      }
+    } catch {
+      // 静默忽略
+    }
+
+    // 降级尝试 Credential Management API
+    if (!supportsCredentialAPI) return
+    try {
+      const cred = await navigator.credentials.get({ password: true, mediation: 'silent' })
+      if (cred instanceof PasswordCredential) {
+        form.email = cred.id
+        form.password = cred.password ?? ''
+        form.remember = true
+      }
+    } catch {
+      // API 不支持或被浏览器策略拒绝，静默忽略
     }
   })
 
@@ -42,11 +65,20 @@
 
   const { mutate: login, loading } = useMutation({
     mutationFn: (params: typeof form) => authStore.login(params),
-    onSuccess: () => {
+    onSuccess: async () => {
       if (form.remember) {
         localStorage.setItem(REMEMBER_KEY, JSON.stringify({ email: form.email, password: form.password }))
       } else {
         localStorage.removeItem(REMEMBER_KEY)
+      }
+      if (supportsCredentialAPI) {
+        if (form.remember) {
+          await navigator.credentials.store(
+            new PasswordCredential({ id: form.email, password: form.password }),
+          )
+        } else {
+          await navigator.credentials.preventSilentAccess()
+        }
       }
       const redirect = route.query.redirect as string | undefined
       notify.success('登录成功')
@@ -85,6 +117,7 @@
         v-model="form.email"
         label="邮箱"
         type="email"
+        autocomplete="username"
         placeholder="your@email.com"
         :error="errors.email"
         required
@@ -93,13 +126,14 @@
         v-model="form.password"
         label="密码"
         type="password"
+        autocomplete="current-password"
         placeholder="••••••••"
         :error="errors.password"
         required
       />
       <div class="flex items-center justify-between">
-        <label class="flex items-center gap-2 text-sm">
-          <input v-model="form.remember" type="checkbox" class="rounded border-gray-300" />
+        <label class="flex items-center gap-2 text-sm cursor-pointer select-none">
+          <input v-model="form.remember" type="checkbox" class="rounded border-gray-300">
           记住我
         </label>
         <NuxtLink to="/forgot-password" class="text-sm text-indigo-600 hover:underline">

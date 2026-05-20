@@ -2,6 +2,8 @@
   // app/components/base/Input.vue
   // Base 层 - 输入框原子组件，支持双向绑定 v-model
 
+  defineOptions({ inheritAttrs: false })
+
   interface Props {
     modelValue?: string | number
     type?: string
@@ -12,7 +14,6 @@
     label?: string
     hint?: string
     required?: boolean
-    // 前后插槽是否有内容
     prefix?: string
     suffix?: string
   }
@@ -53,6 +54,7 @@
       </div>
       <input
         :id="inputId"
+        v-bind="$attrs"
         :value="modelValue"
         :type="type"
         :placeholder="placeholder"
