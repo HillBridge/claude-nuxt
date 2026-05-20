@@ -3,7 +3,7 @@
 </script>
 
 <template>
-  <NuxtLayout>
+  <NuxtLayout :key="String($route.meta.layout ?? 'default')">
     <NuxtPage />
   </NuxtLayout>
   <!-- 全局通知容器 -->

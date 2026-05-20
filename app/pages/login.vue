@@ -6,13 +6,7 @@
 
   definePageMeta({
     layout: 'auth',
-    // 已登录用户访问登录页，重定向到首页
-    middleware: [
-      () => {
-        const auth = useAuthStore()
-        if (auth.isLoggedIn) return navigateTo('/dashboard/users')
-      },
-    ],
+    middleware: ['guest'],
   })
 
   const authStore = useAuthStore()
