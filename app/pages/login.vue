@@ -8,7 +8,7 @@
     middleware: [
       () => {
         const auth = useAuthStore()
-        if (auth.isLoggedIn) return navigateTo('/dashboard')
+        if (auth.isLoggedIn) return navigateTo('/dashboard/users')
       },
     ],
   })
@@ -17,10 +17,22 @@
   const route = useRoute()
   const { notify } = useNotify()
 
+  const REMEMBER_KEY = 'login_remember'
+
   const form = reactive({
     email: '',
     password: '',
     remember: false,
+  })
+
+  onMounted(() => {
+    const saved = localStorage.getItem(REMEMBER_KEY)
+    if (saved) {
+      const { email, password } = JSON.parse(saved)
+      form.email = email
+      form.password = password
+      form.remember = true
+    }
   })
 
   const errors = reactive({
@@ -31,9 +43,14 @@
   const { mutate: login, loading } = useMutation({
     mutationFn: (params: typeof form) => authStore.login(params),
     onSuccess: () => {
+      if (form.remember) {
+        localStorage.setItem(REMEMBER_KEY, JSON.stringify({ email: form.email, password: form.password }))
+      } else {
+        localStorage.removeItem(REMEMBER_KEY)
+      }
       const redirect = route.query.redirect as string | undefined
       notify.success('登录成功')
-      navigateTo(redirect ?? '/dashboard')
+      navigateTo(redirect ?? '/dashboard/users')
     },
     onError: (error) => {
       notify.error(error.message)
@@ -82,16 +99,14 @@
       />
       <div class="flex items-center justify-between">
         <label class="flex items-center gap-2 text-sm">
-          <input v-model="form.remember" type="checkbox" class="rounded border-gray-300" >
+          <input v-model="form.remember" type="checkbox" class="rounded border-gray-300" />
           记住我
         </label>
         <NuxtLink to="/forgot-password" class="text-sm text-indigo-600 hover:underline">
           忘记密码？
         </NuxtLink>
       </div>
-      <BaseButton type="submit" class="w-full" :loading="loading">
-        登录
-      </BaseButton>
+      <BaseButton type="submit" class="w-full" :loading="loading"> 登录 </BaseButton>
     </form>
   </div>
 </template>

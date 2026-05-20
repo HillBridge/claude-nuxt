@@ -10,6 +10,7 @@ import { successResponse } from '../../utils/response'
 const loginSchema = z.object({
   email: z.string().email('邮箱格式不正确'),
   password: z.string().min(6, '密码不能少于6位'),
+  remember: z.boolean().optional().default(false),
 })
 
 export default defineEventHandler(async (event) => {
@@ -35,7 +36,16 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: '邮箱或密码错误' })
   }
 
-  const mockUser = { id: 1, email, name: 'Admin', role: 'admin' as const, status: 'active' as const, avatar: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  const mockUser = {
+    id: 1,
+    email,
+    name: 'Admin',
+    role: 'admin' as const,
+    status: 'active' as const,
+    avatar: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
 
   const accessToken = await signToken({
     sub: mockUser.id,
@@ -43,17 +53,13 @@ export default defineEventHandler(async (event) => {
     role: mockUser.role,
   })
 
-  const maxAge = 7 * 24 * 60 * 60
   setCookie(event, 'auth_token', accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge,
+    maxAge: 7 * 24 * 60 * 60,
     path: '/',
   })
 
-  return successResponse({
-    user: mockUser,
-    expiresIn: maxAge,
-  })
+  return successResponse({ user: mockUser })
 })
