@@ -13,20 +13,6 @@ import { HttpError, BusinessCode } from '~/types/api/http'
 import type { ApiResponse, RequestConfig } from '~/types'
 
 // ============================================================
-// 刷新 token 防并发：同时只有一个 refresh 请求
-// ============================================================
-let refreshPromise: Promise<void> | null = null
-
-async function doRefreshToken(): Promise<void> {
-  const runtimeConfig = useRuntimeConfig()
-  // 刷新接口由服务端负责读旧 cookie、写新 cookie，客户端无需传参
-  await ofetch(`${runtimeConfig.public.apiBaseUrl}/auth/refresh`, {
-    method: 'POST',
-    credentials: 'include',
-  })
-}
-
-// ============================================================
 // 创建 HTTP 实例
 // ============================================================
 export function createHttpClient(config: RequestConfig = {}) {
@@ -59,31 +45,36 @@ export function createHttpClient(config: RequestConfig = {}) {
 
     // ---- 响应拦截 ----
     async onResponse({ response }) {
+      if (!response.ok) return
       const res = response._data as ApiResponse
       if (res.code !== BusinessCode.SUCCESS) {
         throw new HttpError(res.code, res.message, res.data)
       }
-      // 只返回 data 字段，简化业务代码
       response._data = res.data
     },
 
     // ---- 错误拦截 ----
     async onResponseError({ response }) {
-      // 401 - 尝试 refresh token
-      // 刷新成功后服务端会 Set-Cookie 新 auth_token，后续重试自动携带
       if (response.status === 401) {
-        try {
-          if (!refreshPromise) {
-            refreshPromise = doRefreshToken().finally(() => {
-              refreshPromise = null
-            })
+        if (import.meta.client) {
+          // window.location 绕过 Vue Router，避免 guest middleware 因 store 未清空而弹回 dashboard
+          // 同时防止 initialize() 阶段的 401 触发死循环
+          if (!window.location.pathname.startsWith('/login')) {
+            window.location.href = '/login'
           }
-          await refreshPromise
-          // 重试由 ofetch 调用方负责（返回不抛出即表示可以重试）
-          return
-        } catch {
-          await navigateTo('/login')
+        } else {
+          try {
+            const nuxtApp = useNuxtApp()
+            await nuxtApp.runWithContext(async () => {
+              // 先清状态，确保 guest middleware 不会把 302 跳转再弹回来
+              useAuthStore().$patch({ user: null })
+              await navigateTo('/login', { redirectCode: 302 })
+            })
+          } catch {
+            throw createError({ statusCode: 401, statusMessage: 'Unauthorized', fatal: true })
+          }
         }
+        throw new HttpError(401, 'Unauthorized', null)
       }
 
       const msg = (response._data as ApiResponse)?.message ?? response.statusText
