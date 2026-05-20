@@ -43,10 +43,17 @@ export default defineEventHandler(async (event) => {
     role: mockUser.role,
   })
 
+  const maxAge = 7 * 24 * 60 * 60
+  setCookie(event, 'auth_token', accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge,
+    path: '/',
+  })
+
   return successResponse({
-    accessToken,
-    refreshToken: `refresh_${crypto.randomUUID()}`,
     user: mockUser,
-    expiresIn: 7 * 24 * 60 * 60,
+    expiresIn: maxAge,
   })
 })

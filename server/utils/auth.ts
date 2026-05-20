@@ -26,13 +26,12 @@ export async function verifyToken(token: string): Promise<JwtPayload> {
   return payload as unknown as JwtPayload
 }
 
-// 从请求头提取并验证 token
-export async function getAuthUser(event: Parameters<typeof getHeader>[0]): Promise<JwtPayload> {
-  const authorization = getHeader(event, 'authorization')
-  if (!authorization?.startsWith('Bearer ')) {
+// 从 HttpOnly Cookie 提取并验证 token
+export async function getAuthUser(event: Parameters<typeof getCookie>[0]): Promise<JwtPayload> {
+  const token = getCookie(event, 'auth_token')
+  if (!token) {
     throw createError({ statusCode: 401, statusMessage: '未提供认证信息' })
   }
-  const token = authorization.slice(7)
   try {
     return await verifyToken(token)
   } catch {
